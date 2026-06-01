@@ -14,7 +14,7 @@ st.write(
 # -------------------------------------------------------------------------
 # 1. ENTRADAS: Configuración de la Tabla de Verdad en la barra lateral
 # -------------------------------------------------------------------------
-st.sidebar.header("⚙️ Configuración del Problema")
+st.sidebar.header("Configuración del Problema")
 st.sidebar.write("Define la clase objetivo para cada combinación de entrada:")
 
 puntos = [(0, 0), (0, 1), (1, 0), (1, 1)]
@@ -34,7 +34,7 @@ for x1, x2 in puntos:
 # -------------------------------------------------------------------------
 # 2. ENTRADAS: Controles (Sliders) para los Pesos y el Bias
 # -------------------------------------------------------------------------
-st.subheader("🎛️ Perillas de Ajuste (Pesos y Bias)")
+st.subheader("Perillas de Ajuste (Pesos y Bias)")
 col_w1, col_w2, col_bias = st.columns(3)
 
 with col_w1:
@@ -77,12 +77,12 @@ for (x1, x2), y_deseada in etiquetas_deseadas.items():
 col_grafica, col_tabla = st.columns([3, 2])
 
 with col_tabla:
-    st.subheader("📊 Resultados de Clasificación")
+    st.subheader("Resultados de Clasificación")
     st.metric(label="Patrones Clasificados Correctamente", value=f"{aciertos} / 4")
     st.table(filas_tabla)
 
 with col_grafica:
-    st.subheader("📐 Frontera de Decisión en 2D")
+    st.subheader("Frontera de Decisión en 2D")
     
     # Crear la figura de Matplotlib
     fig, ax = plt.subplots(figsize=(6, 5))
