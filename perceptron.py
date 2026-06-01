@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Configuración de la página de Streamlit
 st.set_page_config(page_title="Simulador de Perceptrón", layout="wide")
 
-st.title("🕹️ Simulador Interactivo de un Perceptrón Manual")
+st.title("Perceptrón")
 st.write(
     "Ajusta los pesos y el bias manualmente para intentar separar los puntos "
     "según las etiquetas que definas en el menú lateral."
