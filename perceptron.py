@@ -85,13 +85,37 @@ with col_izq:
     opcion = st.selectbox("Selecciona una imagen del banco de datos:", list(imagenes.keys()))
     img_seleccionada = imagenes[opcion]
     
-    # Renderizado visual de la matriz binaria
-    st.write("**Visualización de Píxeles:**")
-    render_rejilla = ""
-    for i in range(3):
-        p1, p2, p3 = img_seleccionada[i*3], img_seleccionada[i*3+1], img_seleccionada[i*3+2]
-        render_rejilla += f"| {'⬛ (1)' if p1==1 else '⬜ (0)'} | {'⬛ (1)' if p2==1 else '⬜ (0)'} | {'⬛ (1)' if p3==1 else '⬜ (0)'} |\n"
-    st.markdown(render_rejilla)
+    st.write("**Visualización de la Matriz de Pútbol (3x3):**")
+    
+    # --- SOLUCIÓN VISUAL: Renderizar la matriz como un mapa de calor/píxeles ---
+    import matplotlib.pyplot as plt
+    
+    # Convertimos la lista de 9 elementos de nuevo a una matriz de 3x3
+    matriz_3x3 = [
+        img_seleccionada[0:3],
+        img_seleccionada[3:6],
+        img_seleccionada[6:9]
+    ]
+    
+    fig, ax = plt.subplots(figsize=(3, 3))
+    # cmap="binary" pinta el 1 como negro y el 0 como blanco
+    ax.imshow(matriz_3x3, cmap="binary", vmin=0, vmax=1)
+    
+    # Dibujar líneas de rejilla internas para separar los píxeles
+    ax.set_xticks([0.5, 1.5], minor=True)
+    ax.set_yticks([0.5, 1.5], minor=True)
+    ax.grid(which="minor", color="gray", linestyle="-", linewidth=1.5)
+    
+    # Quitar los ejes numéricos para que parezca una pantalla limpia
+    ax.set_xticks([])
+    ax.set_yticks([])
+    
+    # Forzar que los bordes del gráfico se vean limpios
+    for spine in ax.spines.values():
+        spine.set_edgecolor('gray')
+        spine.set_linewidth(1.5)
+        
+    st.pyplot(fig)
 
 with col_der:
     st.write("**Desglose Matemática Interna:**")
