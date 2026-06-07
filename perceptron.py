@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Clasificador de Imágenes Manual", layout="wide")
 
-st.title("👁️ Máquina de Puntuación de Imágenes Binarias (Matriz 3x3)")
+st.title("Máquina de Puntuación de Imágenes Binarias (Matriz 3x3)")
 st.write(
     "Ajusta manualmente los pesos de la rejilla para entrenar a tu máquina. "
     "El objetivo es maximizar el puntaje de las letras 'T' y penalizar las figuras incorrectas."
@@ -42,7 +42,7 @@ imagenes = {
 # -------------------------------------------------------------------------
 # 2. SISTEMA DE PESOS AJUSTABLES (Preconfigurado con la matriz de la guía)
 # -------------------------------------------------------------------------
-st.header("🎛️ Configuración de las Perillas (Pesos por Píxel)")
+st.header("Configuración de las Perillas (Pesos por Píxel)")
 st.write("Cada celda representa el impacto que tendrá ese píxel si se encuentra activo (1).")
 
 # Matriz sugerida en la guía para inicializar
@@ -71,13 +71,13 @@ for f in range(3):
 
 # Umbral ajustable para decidir si el puntaje califica como una T
 st.markdown("---")
-threshold = st.slider("🎯 Umbral de Aceptación (Threshold)", min_value=-5.0, max_value=15.0, value=5.0, step=0.5)
+threshold = st.slider("Umbral de Aceptación (Threshold)", min_value=-5.0, max_value=15.0, value=5.0, step=0.5)
 
 # -------------------------------------------------------------------------
 # 3. CÁLCULO DE PUNTAJE TOTAL Y VISUALIZACIÓN DINÁMICA
 # -------------------------------------------------------------------------
 st.markdown("---")
-st.header("🖼️ Evaluación de la Imagen Seleccionada")
+st.header("Evaluación de la Imagen Seleccionada")
 
 col_izq, col_der = st.columns([2, 3])
 
@@ -124,7 +124,7 @@ with col_der:
 # 4. TABLA GLOBAL DE RENDIMIENTO
 # -------------------------------------------------------------------------
 st.markdown("---")
-st.header("📊 Cuadro de Rendimiento General")
+st.header("Cuadro de Rendimiento General")
 
 tabla_resumen = []
 for nombre, img in imagenes.items():
@@ -133,7 +133,7 @@ for nombre, img in imagenes.items():
     es_t_real = "Tipo T" in nombre
     
     # Evaluar si la predicción manual coincide con la etiqueta real
-    evaluacion = "✨ Correcto" if es_t_segun_modelo == es_t_real else "🚨 Error de Clasificación"
+    evaluacion = "Correcto" if es_t_segun_modelo == es_t_real else "Error de Clasificación"
     
     tabla_resumen.append({
         "Estructura de Imagen": nombre,
