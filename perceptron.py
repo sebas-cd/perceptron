@@ -116,9 +116,9 @@ with col_der:
     
     # Clasificación basada en el Umbral
     if puntaje_total >= threshold:
-        st.success(f"🎉 **Resultado:** CLASIFICADO COMO LETRA T (Puntaje ≥ {threshold})")
+        st.success(f"**Resultado:** CLASIFICADO COMO LETRA T (Puntaje ≥ {threshold})")
     else:
-        st.error(f"❌ **Resultado:** RECHAZADO (Puntaje < {threshold})")
+        st.error(f"**Resultado:** RECHAZADO (Puntaje < {threshold})")
 
 # -------------------------------------------------------------------------
 # 4. TABLA GLOBAL DE RENDIMIENTO
