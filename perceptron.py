@@ -1,133 +1,137 @@
 import streamlit as st
-import numpy as np
-import matplotlib.pyplot as plt
 
-# Configuración de la página de Streamlit
-st.set_page_config(page_title="Simulador de Perceptrón", layout="wide")
+st.set_page_config(page_title="Detector de T Manual", layout="wide")
 
-st.title("Perceptrón")
+st.title("👁️ Operación T: Clasificador de Imágenes Manual")
 st.write(
-    "Ajusta los pesos y el bias manualmente para intentar separar los puntos "
-    "según las etiquetas que definas en el menú lateral."
+    "Ajusta los 9 pesos de la matriz para lograr que las imágenes con forma de 'T' "
+    "obtengan puntajes altos, y las formas incorrectas obtengan puntajes bajos."
 )
 
 # -------------------------------------------------------------------------
-# 1. ENTRADAS: Configuración de la Tabla de Verdad en la barra lateral
+# 1. BASE DE DATOS DE IMÁGENES (Matrices de 3x3 representadas como listas de 9 elementos)
 # -------------------------------------------------------------------------
-st.sidebar.header("Configuración del Problema")
-st.sidebar.write("Define la clase objetivo para cada combinación de entrada:")
-
-puntos = [(0, 0), (0, 1), (1, 0), (1, 1)]
-etiquetas_deseadas = {}
-
-for x1, x2 in puntos:
-    # Por defecto configuramos una compuerta AND ((1,1) es 1, el resto es -1)
-    defecto_index = 1 if (x1 == 1 and x2 == 1) else 0
+patrones = {
+    "Letra T Real (Perfecta)": [1, 1, 1, 
+                                0, 1, 0, 
+                                0, 1, 0],
     
-    etiquetas_deseadas[(x1, x2)] = st.sidebar.selectbox(
-        f"Etiqueta para ({x1}, {x2})",
-        options=[-1, 1],
-        index=defecto_index,
-        key=f"target_{x1}_{x2}"
-    )
+    "Cruz / Signo Más (+)":    [0, 1, 0, 
+                                1, 1, 1, 
+                                0, 1, 0],
+                                
+    "Línea Horizontal Alta":   [1, 1, 1, 
+                                0, 0, 0, 
+                                0, 0, 0],
+                                
+    "Letra T Desplazada Izq.": [1, 1, 0, 
+                                1, 0, 0, 
+                                1, 0, 0],
+                                
+    "Bloque Sólido Completo":  [1, 1, 1, 
+                                1, 1, 1, 
+                                1, 1, 1]
+}
 
 # -------------------------------------------------------------------------
-# 2. ENTRADAS: Controles (Sliders) para los Pesos y el Bias
+# 2. INTERFAZ: Configuración de los 9 Pesos (Matriz Interactiva)
 # -------------------------------------------------------------------------
-st.subheader("Perillas de Ajuste (Pesos y Bias)")
-col_w1, col_w2, col_bias = st.columns(3)
+st.header("🎛️ Matriz de Pesos Neuronales ($w_i$)")
+st.write("Modifica el peso de cada celda. Los píxeles activos (1) se multiplicarán por estos valores.")
 
-with col_w1:
-    w1 = st.slider("Peso w₁", min_value=-2.0, max_value=2.0, value=0.5, step=0.1)
-with col_w2:
-    w2 = st.slider("Peso w₂", min_value=-2.0, max_value=2.0, value=0.5, step=0.1)
-with col_bias:
-    bias = st.slider("Bias (b)", min_value=-2.0, max_value=2.0, value=-0.7, step=0.1)
+# Creamos una cuadrícula visual de 3x3 sliders usando las columnas de Streamlit
+pesos = [0.0] * 9
+filas_ui = [st.columns(3), st.columns(3), st.columns(3)]
+
+idx = 0
+for f in range(3):
+    for c in range(3):
+        with filas_ui[f][c]:
+            # Ponemos un valor inicial por defecto de 0.0 para que el alumno experimente
+            pesos[idx] = st.slider(
+                f"Peso Celda [{f+1},{c+1}]", 
+                min_value=-5.0, 
+                max_value=5.0, 
+                value=0.0, 
+                step=0.5,
+                key=f"w_{idx}"
+            )
+        idx += 1
+
+# Umbral de decisión (Threshold) para la clasificación final
+st.markdown("---")
+threshold = st.slider("🎯 Umbral de Clasificación (Threshold)", min_value=-10.0, max_value=10.0, value=2.0, step=0.5)
 
 # -------------------------------------------------------------------------
-# 3. LÓGICA: Evaluación del Perceptrón y cálculo de métricas
+# 3. INTERFAZ: Selección de Imagen de Prueba y Cálculo Matemático
 # -------------------------------------------------------------------------
-aciertos = 0
-filas_tabla = []
+st.markdown("---")
+st.header("🖼️ Banco de Pruebas Dinámico")
 
-for (x1, x2), y_deseada in etiquetas_deseadas.items():
-    # Cálculo de la suma ponderada (z)
-    suma_ponderada = (x1 * w1) + (x2 * w2) + bias
+col_izq, col_der = st.columns([2, 3])
+
+with col_izq:
+    opcion = st.selectbox("Selecciona una imagen para evaluar:", list(patrones.keys()))
+    imagen_actual = patrones[opcion]
     
-    # Función de activación de escalón (-1 o 1)
-    y_predicha = 1 if suma_ponderada >= 0 else -1
+    # Dibujar la imagen seleccionada de forma visual en la app
+    st.write("**Píxeles de la imagen:**")
+    render_tabla = ""
+    for i in range(3):
+        r1, r2, r3 = imagen_actual[i*3], imagen_actual[i*3+1], imagen_actual[i*3+2]
+        # Cambiamos los 1 por cuadrados negros y los 0 por cuadrados blancos para simular una pantalla
+        render_tabla += f"| {'⬛' if r1==1 else '⬜'} | {'⬛' if r2==1 else '⬜'} | {'⬛' if r3==1 else '⬜'} |\n"
+    st.markdown(render_tabla)
+
+with col_der:
+    st.write("**Cálculo de la Máquina de Puntuación:**")
     
-    # Verificar si la clasificación es correcta
-    es_correcto = (y_predicha == y_deseada)
-    if es_correcto:
-        aciertos += 1
+    # 🔁 OPERACIÓN MATEMÁTICA PURA (Sin librerías)
+    suma_ponderada = 0.0
+    detalles_operacion = []
+    
+    for i in range(9):
+        pixel = imagen_actual[i]
+        peso = pesos[i]
+        producto = pixel * peso
+        suma_ponderada += producto
+        if pixel == 1:
+            detalles_operacion.append(f"Píxel {i+1} activo (1) × Peso ({peso}) = {producto}")
+            
+    # Mostrar resultados numéricos
+    st.write("🧮 Suma de píxeles activos:")
+    for detalle in detalles_operacion:
+        st.caption(detalle)
         
-    filas_tabla.append({
-        "Entrada X₁": x1,
-        "Entrada X₂": x2,
-        "Clase Deseada (y)": y_deseada,
-        "Suma Ponderada (z)": round(suma_ponderada, 2),
-        "Salida Perceptrón (ŷ)": y_predicha,
-        "Estado": "✅ Correcto" if es_correcto else "❌ Incorrecto"
+    st.markdown(f"### **Puntaje Total Obtenido ($y$):** `{round(suma_ponderada, 2)}`")
+    
+    # Decisión final basada en el Threshold
+    if suma_ponderada >= threshold:
+        st.success(f"🎉 **Resultado:** ¡CLASIFICADO COMO UNA LETRA T! (Puntaje ≥ {threshold})")
+    else:
+        st.error(f"❌ **Resultado:** RECHAZADO (Puntaje < {threshold})")
+
+# -------------------------------------------------------------------------
+# 4. TABLA GLOBAL DE PUNTUACIONES (Para el modo juego)
+# -------------------------------------------------------------------------
+st.markdown("---")
+st.header("📊 Tabla de Clasificación Global")
+st.write("Monitorea cómo reacciona tu configuración de pesos ante todos los patrones simultáneamente.")
+
+tabla_global = []
+for nombre, img in patrones.items():
+    puntaje = sum(img[i] * pesos[i] for i in range(9))
+    clasificacion = "✅ Es una T" if puntaje >= threshold else "❌ No es una T"
+    
+    # Saber si la máquina acertó según la lógica humana
+    es_t_real = "Real" in nombre
+    exito = "✨ Correcto" if (clasificacion == "✅ Es una T" and es_t_real) or (clasificacion == "❌ No es una T" and not es_t_real) else "🚨 Error"
+    
+    tabla_global.append({
+        "Imagen": nombre,
+        "Puntaje": round(puntaje, 2),
+        "Predicción del Sistema": clasificacion,
+        "Diagnóstico": exito
     })
 
-# -------------------------------------------------------------------------
-# 4. VISUALIZACIÓN: Renderizado de Resultados y Gráfica
-# -------------------------------------------------------------------------
-col_grafica, col_tabla = st.columns([3, 2])
-
-with col_tabla:
-    st.subheader("Resultados de Clasificación")
-    st.metric(label="Patrones Clasificados Correctamente", value=f"{aciertos} / 4")
-    st.table(filas_tabla)
-
-with col_grafica:
-    st.subheader("Frontera de Decisión en 2D")
-    
-    # Crear la figura de Matplotlib
-    fig, ax = plt.subplots(figsize=(6, 5))
-    
-    # Graficar los puntos del dataset
-    for (x1, x2), y_deseada in etiquetas_deseadas.items():
-        color = "#FF7F0E" if y_deseada == 1 else "#1F77B4"
-        marcador = "o" if y_deseada == 1 else "s"
-        ax.scatter(x1, x2, color=color, s=200, marker=marcador, edgecolor='black', zorder=5, 
-                   label=f"Clase {y_deseada}" if f"Clase {y_deseada}" not in ax.get_legend_handles_labels()[1] else "")
-    
-    # ---- LÓGICA CRÍTICA: Graficar la frontera de decisión (w1*x1 + w2*x2 + b = 0) ----
-    x1_valores = np.linspace(-0.5, 1.5, 100)
-    
-    if w2 != 0:
-        # Caso estándar: se puede despejar x2 en función de x1
-        # x2 = (-w1*x1 - b) / w2
-        x2_valores = (-w1 * x1_valores - bias) / w2
-        ax.plot(x1_valores, x2_valores, color="red", linestyle="--", linewidth=2, label="Frontera de decisión")
-    else:
-        # Caso especial: w2 es CERO. La línea es completamente vertical
-        if w1 != 0:
-            # Despejando: x1 = -b / w1
-            x1_vertical = -bias / w1
-            ax.axvline(x=x1_vertical, color="red", linestyle="--", linewidth=2, label="Frontera de decisión")
-        else:
-            # Si tanto w1 como w2 son cero, no hay línea (plano indeterminado)
-            st.warning("⚠️ Los pesos w₁ y w₂ son cero. El perceptrón no puede definir una línea.")
-
-    # Colorear las regiones de decisión de fondo (Opcional, mejora visual)
-    # Crea una rejilla en el plano para pintar dónde predice +1 (rojo claro) y -1 (azul claro)
-    xx, yy = np.meshgrid(np.linspace(-0.5, 1.5, 200), np.linspace(-0.5, 1.5, 200))
-    Z = (xx * w1) + (yy * w2) + bias
-    Z_activado = np.where(Z >= 0, 1, -1)
-    ax.contourf(xx, yy, Z_activado, levels=[-2, 0, 2], colors=['#1F77B4', '#FF7F0E'], alpha=0.15, zorder=1)
-
-    # Configuración de límites y estilo del plano cartesiano
-    ax.set_xlim(-0.5, 1.5)
-    ax.set_ylim(-0.5, 1.5)
-    ax.set_xlabel("Entrada X₁", fontsize=12)
-    ax.set_ylabel("Entrada X₂", fontsize=12)
-    ax.axhline(0, color='gray', linewidth=0.8, linestyle=":")
-    ax.axvline(0, color='gray', linewidth=0.8, linestyle=":")
-    ax.grid(True, which='both', linestyle='--', alpha=0.5)
-    ax.legend(loc="upper left")
-    
-    # Renderizar la gráfica en Streamlit
-    st.pyplot(fig)
+st.table(tabla_global)
