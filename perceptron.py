@@ -1,169 +1,156 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Clasificador de Imágenes Manual", layout="wide")
+st.set_page_config(page_title="Clasificador Automático 3x3", layout="wide")
 
-st.title("Máquina de Puntuación de Imágenes Binarias (Matriz 3x3)")
+st.title("🎯 Clasificador Automático de Imágenes (Detector de Letras T)")
 st.write(
-    "Ajusta manualmente los pesos de la rejilla para entrenar a tu máquina. "
-    "El objetivo es maximizar el puntaje de las letras 'T' y penalizar las figuras incorrectas."
+    "¡Bienvenido a la fase de decisión! Ajusta los pesos y el umbral (*threshold*) "
+    "para que la máquina clasifique automáticamente y de forma perfecta todas las imágenes."
 )
 
 # -------------------------------------------------------------------------
-# 1. IMÁGENES BINARIAS (3 Tipo T y 3 que NO son T)
+# 1. BASE DE DATOS DE EVALUACIÓN (Ejemplos Positivos y Negativos)
 # -------------------------------------------------------------------------
-imagenes = {
-    # --- 3 Imágenes Tipo T ---
-    "Letra T Estándar (Tipo T)": [1, 1, 1, 
-                                  0, 1, 0, 
-                                  0, 1, 0],
+# Estructuramos el banco con etiquetas reales para que el sistema calcule los errores
+imagenes_banco = {
+    # --- Ejemplos Positivos (Son una T) ---
+    "Letra T Estándar": {"pixeles": [1, 1, 1, 0, 1, 0, 0, 1, 0], "es_t_real": True},
+    "Letra T Techo Grueso": {"pixeles": [1, 1, 1, 1, 1, 1, 0, 1, 0], "es_t_real": True},
+    "Letra T Corta": {"pixeles": [1, 1, 1, 0, 1, 0, 0, 0, 0], "es_t_real": True},
     
-    "Letra T Ancha / Techo Largo (Tipo T)": [1, 1, 1, 
-                                             1, 1, 1, 
-                                             0, 1, 0],
-                                             
-    "Letra T Corta (Tipo T)": [1, 1, 1, 
-                               0, 1, 0, 
-                               0, 0, 0],
-                               
-    # --- 3 Imágenes que NO son T ---
-    "Cruz / Signo Más (No es T)": [0, 1, 0, 
-                                   1, 1, 1, 
-                                   0, 1, 0],
-                                   
-    "Línea Horizontal (No es T)": [1, 1, 1, 
-                                   0, 0, 0, 
-                                   0, 0, 0],
-                                  
-    "Cuadrado Hueco (No es T)": [1, 1, 1, 
-                                 1, 0, 1, 
-                                 1, 1, 1]
+    # --- Ejemplos Negativos (NO son una T) ---
+    "Signo Más / Cruz": {"pixeles": [0, 1, 0, 1, 1, 1, 0, 1, 0], "es_t_real": False},
+    "Línea Horizontal Alta": {"pixeles": [1, 1, 1, 0, 0, 0, 0, 0, 0], "es_t_real": False},
+    "Cuadrado Hueco": {"pixeles": [1, 1, 1, 1, 0, 1, 1, 1, 1], "es_t_real": False}
 }
 
 # -------------------------------------------------------------------------
-# 2. SISTEMA DE PESOS AJUSTABLES (Preconfigurado con la matriz de la guía)
+# 2. INTERFAZ DE CONTROL: Ajuste de Parámetros Dinámicos
 # -------------------------------------------------------------------------
-st.header("Configuración de las Perillas (Pesos por Píxel)")
-st.write("Cada celda representa el impacto que tendrá ese píxel si se encuentra activo (1).")
+st.header("🎛️ Panel de Control de Parámetros")
+col_sliders, col_threshold = st.columns([2, 1])
 
-# Matriz sugerida en la guía para inicializar
-pesos_iniciales = [
-    2.0,  2.0,  2.0,
-   -1.0,  3.0, -1.0,
-   -1.0,  3.0, -1.0
-]
+with col_sliders:
+    st.write("**Ajuste de Pesos ($w_i$) por Píxel:**")
+    # Inicializamos con la matriz sugerida en la etapa anterior
+    pesos_iniciales = [2.0, 2.0, 2.0, -1.0, 3.0, -1.0, -1.0, 3.0, -1.0]
+    pesos = [0.0] * 9
+    
+    # Renderizado en rejilla 3x3 para que el usuario sepa qué pixel modifica
+    columnas_ui = [st.columns(3), st.columns(3), st.columns(3)]
+    idx = 0
+    for f in range(3):
+        for c in range(3):
+            with columnas_ui[f][c]:
+                pesos[idx] = st.slider(
+                    f"Peso Píxel [{f+1},{c+1}]", 
+                    min_value=-5.0, 
+                    max_value=5.0, 
+                    value=pesos_iniciales[idx], 
+                    step=0.5,
+                    key=f"w_{idx}"
+                )
+            idx += 1
 
-pesos = [0.0] * 9
-columnas_ui = [st.columns(3), st.columns(3), st.columns(3)]
+with col_threshold:
+    st.write("**Mecanismo de Decisión:**")
+    # Control para modificar el límite divisorio de la máquina
+    threshold = st.number_input(
+        "🎯 Umbral de Clasificación (Threshold)", 
+        min_value=-10.0, 
+        max_value=20.0, 
+        value=5.0, 
+        step=0.5
+    )
+    st.caption(
+        "Si el puntaje de la imagen supera este valor, la máquina dirá de forma "
+        "autónoma 'Es una T'. De lo contrario, dirá 'No es una T'."
+    )
 
-idx = 0
-for f in range(3):
-    for c in range(3):
-        with columnas_ui[f][c]:
-            pesos[idx] = st.slider(
-                f"Celda [{f+1},{c+1}]", 
-                min_value=-5.0, 
-                max_value=5.0, 
-                value=pesos_iniciales[idx], 
-                step=0.5,
-                key=f"w_{idx}"
-            )
-        idx += 1
-
-# Umbral ajustable para decidir si el puntaje califica como una T
+# -------------------------------------------------------------------------
+# 3. INTERFAZ DE PRUEBA: Evaluación de Ejemplo Individual
+# -------------------------------------------------------------------------
 st.markdown("---")
-threshold = st.slider("Umbral de Aceptación (Threshold)", min_value=-5.0, max_value=15.0, value=5.0, step=0.5)
+st.header("🖼️ Banco de Pruebas Individual")
 
-# -------------------------------------------------------------------------
-# 3. CÁLCULO DE PUNTAJE TOTAL Y VISUALIZACIÓN DINÁMICA
-# -------------------------------------------------------------------------
-st.markdown("---")
-st.header("Evaluación de la Imagen Seleccionada")
+col_img, col_calculo = st.columns([1, 2])
 
-col_izq, col_der = st.columns([2, 3])
-
-with col_izq:
-    opcion = st.selectbox("Selecciona una imagen del banco de datos:", list(imagenes.keys()))
-    img_seleccionada = imagenes[opcion]
+with col_img:
+    opcion = st.selectbox("Selecciona una imagen para testear:", list(imagenes_banco.keys()))
+    datos_img = imagenes_banco[opcion]
+    pixeles_img = datos_img["pixeles"]
     
-    st.write("**Visualización de la Matriz de Pútbol (3x3):**")
-    
-    # --- SOLUCIÓN VISUAL: Renderizar la matriz como un mapa de calor/píxeles ---
-    import matplotlib.pyplot as plt
-    
-    # Convertimos la lista de 9 elementos de nuevo a una matriz de 3x3
-    matriz_3x3 = [
-        img_seleccionada[0:3],
-        img_seleccionada[3:6],
-        img_seleccionada[6:9]
-    ]
-    
-    fig, ax = plt.subplots(figsize=(3, 3))
-    # cmap="binary" pinta el 1 como negro y el 0 como blanco
+    # Dibujar la matriz en blanco y negro de 3x3 usando Matplotlib
+    matriz_3x3 = [pixeles_img[0:3], pixeles_img[3:6], pixeles_img[6:9]]
+    fig, ax = plt.subplots(figsize=(2.5, 2.5))
     ax.imshow(matriz_3x3, cmap="binary", vmin=0, vmax=1)
     
-    # Dibujar líneas de rejilla internas para separar los píxeles
+    # Líneas divisorias de la cuadrícula
     ax.set_xticks([0.5, 1.5], minor=True)
     ax.set_yticks([0.5, 1.5], minor=True)
     ax.grid(which="minor", color="gray", linestyle="-", linewidth=1.5)
-    
-    # Quitar los ejes numéricos para que parezca una pantalla limpia
     ax.set_xticks([])
     ax.set_yticks([])
-    
-    # Forzar que los bordes del gráfico se vean limpios
-    for spine in ax.spines.values():
-        spine.set_edgecolor('gray')
-        spine.set_linewidth(1.5)
-        
     st.pyplot(fig)
 
-with col_der:
-    st.write("**Desglose Matemática Interna:**")
-    
-    # Operación matemática pura: y = Σ(wᵢxᵢ)
-    puntaje_total = 0.0
-    operaciones_texto = []
-    
+with col_calculo:
+    # Lógica del modelo: y = Σ(w_i * x_i)
+    score = 0.0
     for i in range(9):
-        pixel = img_seleccionada[i]
-        peso = pesos[i]
-        producto = pixel * peso
-        puntaje_total += producto
-        if pixel == 1:
-            operaciones_texto.append(f"Píxel {i+1} encendido (1) × Peso ({peso}) = {producto}")
-            
-    # Mostrar el paso a paso matemático al usuario
-    for operacion in operaciones_texto:
-        st.caption(operacion)
+        score += pixeles_img[i] * pesos[i]
         
-    st.markdown(f"### **Puntaje Total Calculado ($y$):** `{round(puntaje_total, 2)}`")
+    st.markdown(f"### **Puntaje Calculado (Score):** `{round(score, 2)}`")
+    st.markdown(f"### **Umbral Establecido (Threshold):** `{round(threshold, 2)}`")
     
-    # Clasificación basada en el Umbral
-    if puntaje_total >= threshold:
-        st.success(f"**Resultado:** CLASIFICADO COMO LETRA T (Puntaje ≥ {threshold})")
+    # ---- REGLA DE CLASIFICACIÓN MÍNIMA SOLICITADA ----
+    if score >= threshold:
+        decision = "Es una T"
+        st.success(f"🤖 **Decisión de la máquina:** ¡{decision}!")
     else:
-        st.error(f"**Resultado:** RECHAZADO (Puntaje < {threshold})")
+        decision = "No es una T"
+        st.error(f"🤖 **Decisión de la máquina:** ¡{decision}!")
+        
+    # Validar si la máquina acertó con la realidad humana
+    es_correcto = (decision == "Es una T" and datos_img["es_t_real"]) or (decision == "No es una T" and not datos_img["es_t_real"])
+    if es_correcto:
+        st.info("✨ **Diagnóstico:** Clasificación Correcta (El modelo coincide con la realidad).")
+    else:
+        st.warning("🚨 **Diagnóstico:** Error de Clasificación (Falso Positivo o Falso Negativo).")
 
 # -------------------------------------------------------------------------
-# 4. TABLA GLOBAL DE RENDIMIENTO
+# 4. SISTEMA DE EVALUACIÓN COLECTIVA Y DETECCIÓN DE ERRORES
 # -------------------------------------------------------------------------
 st.markdown("---")
-st.header("Cuadro de Rendimiento General")
+st.header("📊 Matriz de Evaluación Global y Detección de Errores")
+st.write("Monitorea el comportamiento del clasificador simultáneamente ante todos los ejemplos:")
 
-tabla_resumen = []
-for nombre, img in imagenes.items():
-    score = sum(img[i] * pesos[i] for i in range(9))
-    es_t_segun_modelo = score >= threshold
-    es_t_real = "Tipo T" in nombre
+tabla_global = []
+aciertos_totales = 0
+
+for nombre, datos in imagenes_banco.items():
+    # Cálculo automático
+    puntaje_img = sum(datos["pixeles"][i] * pesos[i] for i in range(9))
     
-    # Evaluar si la predicción manual coincide con la etiqueta real
-    evaluacion = "Correcto" if es_t_segun_modelo == es_t_real else "Error de Clasificación"
+    # Decisión automática
+    prediccion = "Es una T" if puntaje_img >= threshold else "No es una T"
+    realidad = "Es una T" if datos["es_t_real"] else "No es una T"
     
-    tabla_resumen.append({
-        "Estructura de Imagen": nombre,
-        "Puntaje Total ($y$)": round(score, 2),
-        "Predicción": "Es una T" if es_t_segun_modelo else "No es una T",
-        "Diagnóstico": evaluacion
+    # Diagnóstico del error
+    if prediccion == realidad:
+        diagnostico = "✅ Éxito"
+        aciertos_totales += 1
+    else:
+        diagnostico = "❌ ERROR"
+        
+    tabla_global.append({
+        "Estructura Visual": nombre,
+        "Clase Real": realidad,
+        "Puntaje Obtenido": round(puntaje_img, 2),
+        "Decisión Automática": prediccion,
+        "Estado del Clasificador": diagnostico
     })
 
-st.table(tabla_resumen)
+# Métricas de rendimiento de la máquina
+st.metric(label="Precisión General del Clasificador", value=f"{aciertos_totales} / {len(imagenes_banco)} Correctos")
+st.table(tabla_global)
